@@ -48,9 +48,8 @@ class NetworkCalcIPv4():
             self.__cidr = self.__netmask_to_cidr(netmask)
             self.__netmask = netmask
 
-        # calculating additional information
-        self.__hosts = []
-        self.__calc_hosts()
+        # calculating the real network ID, broadcast address and every host address
+        self.__network_id, self.__broadcast, self.__hosts = self.__calc_hosts(self.__network_id, self.__cidr)
 
     def __str__(self):
         final_str =              f'Network ID   : {self.__network_id}'
@@ -262,19 +261,23 @@ class NetworkCalcIPv4():
 
         return cidr
 
-    def __calc_hosts(self):
-        """Calculates the Broadcast Address and every host address for this network.
+    def __calc_hosts(self, ipv4, cidr):
+        """Calculates the network ID, Broadcast Address and every host address for a given ip/cidr combination.
 
         Keyword arguments:
         None
         """
 
         # calculate amount of ip-addresses (including network id an broadcast)
-        host_bits = 32 - self.__cidr
+        host_bits = 32 - cidr
         sum_hosts = 2**host_bits
 
         # cut the binary network part from network id
-        net_bin = self.__ipv4_to_binary(self.__network_id)[:-host_bits]
+        net_bin = self.__ipv4_to_binary(ipv4)[:-host_bits]
+
+        network_id = None
+        broadcast = None
+        hosts = []
 
         # count binary from 0 to sum_hosts
         leading_zeros = '{:0>'+str(host_bits)+'}'
@@ -282,13 +285,15 @@ class NetworkCalcIPv4():
             current_bin = leading_zeros.format(str(format(i, 'b')))
             if i == 0:
                 # this is the network id - ignore
-                print('Network:'+self.__binary_to_ipv4(net_bin + current_bin))
+                network_id = self.__binary_to_ipv4(net_bin + current_bin)
             elif i == sum_hosts-1:
                 # this is the broadcast ip
-                self.__broadcast = self.__binary_to_ipv4(net_bin + current_bin)
+                broadcast = self.__binary_to_ipv4(net_bin + current_bin)
             else:
                 # this is a host address
-                self.__hosts.append(self.__binary_to_ipv4(net_bin + current_bin))
+                hosts.append(self.__binary_to_ipv4(net_bin + current_bin))
+
+        return network_id, broadcast, hosts
 
 if __name__ == '__main__':
     my_network = NetworkCalcIPv4('192.168.5.0/24')
